@@ -1,24 +1,29 @@
-pipeline{
+pipeline {
   agent any
-  environment{
-    VENV = 'venv'
+  environment {
+    IMAGE_NAME = 'qian2828/test-flask'
   }
-  stages{
-    stage('Checkout git'){
-      steps{
-        git branch: 'main', url: 'https://github.com/Parth2k3/test-flask'
+  stages {
+    stage('Checkout') {
+      steps {
+        git branch 'main', url: 'https://github.com/SoonMingQian/test-flask'
       }
     }
-    stage('set up the venv'){
-      steps{
-        bat 'python -m venv %VENV%'
-        bat '%VENV%\\Scripts\\python -m pip install --upgrade pip'
-        bat '%VENV%\\Scripts\\pip install -r requirements.txt'
+    stage('Build Docker image') {
+      steps {
+        sh "docker build -t %IMAGE_NAME%:latest ."
       }
     }
-    stage('RUN THE TESTS'){
-      steps{
-        bat '%VENV%\\Scripts\\python -m unittest discover -s tests'
+    stage('Push to Dockerhub') {
+      steps {
+        withCredentials([usernamePassword(credentialsId: 'Docker', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+          sh """
+          echo %DOCKER_PASS% |
+          docker login -u %DOCKER_USER% --password-stdin |
+          docker push %IMAGE_NAME%:latest
+          docker logout
+          """
+        }
       }
     }
   }
